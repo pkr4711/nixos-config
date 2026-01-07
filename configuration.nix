@@ -14,46 +14,56 @@
   # nix.optimise.automatic = true;
   # nix.settings.experimental-features = [ "nix-command" "flakes" ];
   nix = {
-     # Reference: https://nixos.org/manual/nix/stable/command-ref/conf-file
-     settings = {
-       connect-timeout = 3; # don't hang forever when binary-cache is npt reachable
-       log-lines = 25;
-       min-free = 268435456; # 256 MiB
-       max-free = 1073741824; # 1 GiB
-       experimental-features = "nix-command flakes";
-       fallback = true;
-       warn-dirty = false;
-       # nix optimise the store after each and every build (for the built path)
-       # by replacing identical files in the store by hard links.
-       auto-optimise-store = true;
-       keep-outputs = true;
-       keep-derivations = true;
-       trusted-users = [ "root" "@wheel" ];
-
-       # Binary Cache
-       trusted-substituters = [
-         "http://binary-cache-v2.vpn.cyberus-technology.de"
-       ];
-       substituters = [
-         "http://binary-cache-v2.vpn.cyberus-technology.de"
-       ];
-       trusted-public-keys = [
-         "cyberus-1:0jjMD2b+guloGW27ZToxDQApCoWj+4ONW9v8VH/Bv0Q=" # v2 cache
-       ];
-     };
-
-     # Garbage Collection
-     gc = {
-       automatic = true;
-       dates = "monthly";
-       # Runs normal garbage-collection plus removes all NixOS generations
-       # that are older than the specified time.
-       options = "--delete-older-than 30d";
-     };
-
-      # Scheduled systemd service that optimizes all paths in the nix store
+    # Reference: https://nixos.org/manual/nix/stable/command-ref/conf-file
+    settings = {
+      connect-timeout = 3; # don't hang forever when binary-cache is npt reachable
+      log-lines = 25;
+      min-free = 268435456; # 256 MiB
+      max-free = 1073741824; # 1 GiB
+      experimental-features = "nix-command flakes";
+      fallback = true;
+      warn-dirty = false;
+      # nix optimise the store after each and every build (for the built path)
       # by replacing identical files in the store by hard links.
-      optimise.automatic = true;
+      auto-optimise-store = true;
+      keep-outputs = true;
+      keep-derivations = true;
+      trusted-users = [ "root" "@wheel" ];
+
+      # Binary Cache
+
+      # Faster downloads from Nix binary caches (higher parallelism)
+      download-buffer-size =
+      512 * 1024 * 1024 # 512 MiB
+      ;
+      # 128 instead of 25 parallel connections for faster downloads
+      http-connections = 128 # default is 25 _
+      ;
+      max-substitution-jobs = 128 # default is 16
+      ;
+      trusted-substituters = [
+        "http://binary-cache-v2.vpn.cyberus-technology.de"
+      ];
+      substituters = [
+        "http://binary-cache-v2.vpn.cyberus-technology.de"
+      ];
+      trusted-public-keys = [
+        "cyberus-1:0jjMD2b+guloGW27ZToxDQApCoWj+4ONW9v8VH/Bv0Q=" # v2 cache
+      ];
+    };
+
+    # Garbage Collection
+    gc = {
+      automatic = true;
+      dates = "monthly";
+      # Runs normal garbage-collection plus removes all NixOS generations
+      # that are older than the specified time.
+      options = "--delete-older-than 30d";
+    };
+
+    # Scheduled systemd service that optimizes all paths in the nix store
+    # by replacing identical files in the store by hard links.
+    optimise.automatic = true;
   };
 
   # Bootloader.
@@ -66,11 +76,17 @@
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
   boot.loader.systemd-boot.configurationLimit = 5;
-  boot.loader.grub.configurationLimit = 3;
+  boot.loader.grub.configurationLimit = 5;
 
   boot.initrd.luks.devices."luks-8f577fbc-07bb-4493-bb6f-f859a3ea6682".device = "/dev/disk/by-uuid/8f577fbc-07bb-4493-bb6f-f859a3ea6682";
   networking.hostName = "nixos"; # Define your hostname.
   # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
+
+  boot.kernelPackages = pkgs.linuxPackages_latest;
+  boot.kernelParams = [ "mitigations=off" ];
+
+  networking.firewall.allowPing = true;
+  networking.firewall.rejectPackets = true;
 
   documentation.enable = true;
   documentation.dev.enable = true;
@@ -201,7 +217,7 @@
     man-pages
     man-pages-posix
     tldr
-    powerline-fonts
+    traceroute
   ];
 
   environment.shells = with pkgs; [ zsh bash ];
