@@ -8,7 +8,7 @@
   outputs = { self, nixpkgs }: {
     nixosConfigurations = {
       # This should correspond to the hostname of the machine
-      nixos = nixpkgs.lib.nixosSystem {
+      mars = nixpkgs.lib.nixosSystem {
         system = "x86_64-linux";
         modules = [
           ./configuration.nix

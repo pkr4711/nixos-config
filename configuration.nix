@@ -1,3 +1,11 @@
+
+# apply update with:
+# sudo nixos-rebuild switch --flake  /home/paul/work/repos/nixos-config
+
+# update input
+# nix flake update nixpkgs
+
+
 # Edit this configuration file to define what should be installed on
 # your system.  Help is available in the configuration.nix(5) man page
 # and in the NixOS manual (accessible by running ‘nixos-help’).
@@ -79,7 +87,7 @@
   boot.loader.grub.configurationLimit = 5;
 
   boot.initrd.luks.devices."luks-8f577fbc-07bb-4493-bb6f-f859a3ea6682".device = "/dev/disk/by-uuid/8f577fbc-07bb-4493-bb6f-f859a3ea6682";
-  networking.hostName = "nixos"; # Define your hostname.
+  networking.hostName = "mars"; # Define your hostname.
   # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
 
   boot.kernelPackages = pkgs.linuxPackages_latest;
@@ -182,7 +190,7 @@
     isNormalUser = true;
     description = "Paul Kroeher";
     shell = pkgs.zsh;
-    extraGroups = [ "networkmanager" "wheel" "video" "kvm" "libvirtd" "docker" "vboxusers" ];
+    extraGroups = [ "networkmanager" "wheel" "video" "kvm" "libvirtd" "docker" "vboxusers" "audio" "libvirtd" ];
     packages = with pkgs; [
     #  thunderbird
     ];
@@ -218,6 +226,16 @@
     man-pages-posix
     tldr
     traceroute
+    bind
+    pciutils
+    usbutils
+    helm
+    kubectl
+    headsetcontrol
+    gnupg
+    libvirt
+    virt-manager
+    slack
   ];
 
   environment.shells = with pkgs; [ zsh bash ];
@@ -285,5 +303,19 @@
     useRoutingFeatures = "client";
   };
 
+  # Logitech udev rules
+  services.udev.extraRules = ''
+    # Your rule goes here
+  '';
+
+
+  virtualisation.libvirtd = {
+    enable = true;
+    qemu = {
+      package = pkgs.qemu_kvm;
+      runAsRoot = true;
+      swtpm.enable = true;
+    };
+  };
 
 }
