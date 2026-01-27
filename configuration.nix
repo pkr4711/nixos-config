@@ -207,35 +207,45 @@
   environment.systemPackages = with pkgs; [
   #  vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
   #  wget
-    google-chrome
-    thunderbird
-    git
-    whois
+    bind
     dmidecode
-    pwgen
-    wget
-    usbutils
-    nmap
-    util-linux
+    file
+    fio
+    git
+    gitlab-timelogs
+    gitlint
+    gnupg
+    google-chrome
+    headsetcontrol
+    helm
+    iperf
+    jq
     kdePackages.okular
-    vscodium
-    python3
-    python313Packages.pip
-    pre-commit
+    kubectl
+    libreoffice
+    libvirt
     man-pages
     man-pages-posix
+    nmap
+    pciutils
+    pre-commit
+    pwgen
+    python3
+    python313Packages.pip
+    shotwell
+    slack
+    sshpass
+    thunderbird
     tldr
     traceroute
-    bind
-    pciutils
     usbutils
-    helm
-    kubectl
-    headsetcontrol
-    gnupg
-    libvirt
+    usbutils
+    util-linux
     virt-manager
-    slack
+    vscodium
+    wget
+    whois
+    yq-go
   ];
 
   environment.shells = with pkgs; [ zsh bash ];
@@ -306,6 +316,9 @@
   # Logitech udev rules
   services.udev.extraRules = ''
     # Your rule goes here
+    # Logitech G533 headset (adjust IDs from lsusb)
+    # SUBSYSTEM=="usb", ATTRS{idVendor}=="046d", ATTRS{idProduct}=="0a66", MODE="0660", GROUP="audio"
+    # SUBSYSTEM=="sound", ATTRS{idVendor}=="046d", ATTRS{idProduct}=="0a66", MODE="0660"
   '';
 
 
@@ -318,4 +331,8 @@
     };
   };
 
+
+  security.sudo.extraConfig = ''
+    Defaults        timestamp_timeout=30
+  '';
 }
