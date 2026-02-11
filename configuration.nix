@@ -95,6 +95,7 @@
 
   networking.firewall.allowPing = true;
   networking.firewall.rejectPackets = true;
+  networking.firewall.allowedTCPPorts = [ 22 ];
 
   documentation.enable = true;
   documentation.dev.enable = true;
@@ -207,7 +208,10 @@
   environment.systemPackages = with pkgs; [
   #  vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
   #  wget
+    argc
     bind
+    brave
+    cargo
     dmidecode
     file
     fio
@@ -227,6 +231,7 @@
     man-pages
     man-pages-posix
     nmap
+    openssl
     pciutils
     pre-commit
     pwgen
@@ -306,7 +311,6 @@
   # (e.g. man configuration.nix or on https://nixos.org/nixos/options.html).
   system.stateVersion = "25.11"; # Did you read the comment?
 
-
   # tailscale
   services.tailscale = {
     enable = true;
@@ -321,7 +325,6 @@
     # SUBSYSTEM=="sound", ATTRS{idVendor}=="046d", ATTRS{idProduct}=="0a66", MODE="0660"
   '';
 
-
   virtualisation.libvirtd = {
     enable = true;
     qemu = {
@@ -331,8 +334,20 @@
     };
   };
 
-
   security.sudo.extraConfig = ''
     Defaults        timestamp_timeout=30
   '';
+
+  # ssh server
+  services.openssh = {
+    enable = true;
+    ports = [ 22 ];
+    settings = {
+      PasswordAuthentication = true;
+      AllowUsers = null; # Allows all users by default. Can be [ "user1" "user2" ]
+      UseDns = true;
+      X11Forwarding = false;
+      PermitRootLogin = "prohibit-password"; # "yes", "without-password", "prohibit-password", "forced-commands-only", "no"
+    };
+  };
 }
