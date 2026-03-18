@@ -86,6 +86,10 @@
   boot.loader.systemd-boot.configurationLimit = 5;
   boot.loader.grub.configurationLimit = 5;
 
+  # optional, but ensures rpc-statsd is running for on demand mounting
+  boot.supportedFilesystems = [ "nfs" ];
+  services.rpcbind.enable = true; # needed for NFS
+
   boot.initrd.luks.devices."luks-8f577fbc-07bb-4493-bb6f-f859a3ea6682".device = "/dev/disk/by-uuid/8f577fbc-07bb-4493-bb6f-f859a3ea6682";
   networking.hostName = "mars"; # Define your hostname.
   # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
@@ -93,9 +97,103 @@
   boot.kernelPackages = pkgs.linuxPackages_latest;
   boot.kernelParams = [ "mitigations=off" ];
 
-  networking.firewall.allowPing = true;
-  networking.firewall.rejectPackets = true;
-  networking.firewall.allowedTCPPorts = [ 22 ];
+  networking.firewall = {
+    allowPing = true;
+    rejectPackets = true;
+    allowedTCPPorts = [ 22 ];
+    allowedUDPPorts = [ 53 67 68 ];
+    # Allow all traffic on tap0
+    interfaces.tap0 = {
+      allowedTCPPorts = [ 1 65535 ];
+      allowedUDPPorts = [ 1 65535 ];
+      # Or instead of ports, you can fully trust the interface:
+      # allowedTCPPortRanges = [{ from = 1; to = 65535; }];
+      # allowedUDPPortRanges = [{ from = 1; to = 65535; }];
+    };
+  };
+
+  # Enable networking
+  networking.networkmanager.enable = false;
+  networking.useNetworkd = true;
+
+  # disable traditional networking
+  networking.useDHCP = false;
+  networking.wireless.enable = false;  # Avoid conflicts with iwd
+
+  networking.wireless.iwd.enable = true;
+  networking.wireless.iwd.settings = {
+    Settings.AutoConnect = true;
+  };
+
+  systemd.network = {
+    enable = true;
+    netdevs = {
+        # Create the bridge interface
+        "20-br0" = {
+          netdevConfig = {
+            Kind = "bridge";
+            Name = "br0";
+          };
+        };
+
+        "30-tap0" = {
+          netdevConfig = {
+            Kind = "tap";
+            Name = "tap0";
+          };
+        };
+    };
+    networks = {
+      "10-lan" = {
+        matchConfig.Name = "enp0s13f0*";   # enp0s13f0u3u1
+        networkConfig.Bridge = "br0";
+        linkConfig.RequiredForOnline = "enslaved";
+        # networkConfig = {
+        #   # start a DHCP Client for IPv4 Addressing/Routing
+        #   DHCP = "ipv4";
+        #   # accept Router Advertisements for Stateless IPv6 Autoconfiguraton (SLAAC)
+        #   IPv6AcceptRA = true;
+        # };
+        # # make routing on this interface a dependency for network-online.target
+        # linkConfig.RequiredForOnline = "routable";
+      };
+      "30-tap" = {
+        matchConfig.Name = "tap0";
+        networkConfig.Bridge = "br0";
+        linkConfig.RequiredForOnline = "no";
+      };
+      "20-br0" = {
+        matchConfig.Name = "br0";
+        bridgeConfig = {};
+        networkConfig = {
+          # start a DHCP Client for IPv4 Addressing/Routing
+          DHCP = "ipv4";
+          # accept Router Advertisements for Stateless IPv6 Autoconfiguraton (SLAAC)
+          IPv6AcceptRA = true;
+        };
+        linkConfig = {
+          # or "routable" with IP addresses configured
+          # or "carrier"
+          RequiredForOnline = "routable";
+        };
+      };
+      "10-wlan" = {
+        matchConfig.Name = "wlan0"; # wlp0s20f3
+        networkConfig = {
+          # start a DHCP Client for IPv4 Addressing/Routing
+          DHCP = "ipv4";
+          # accept Router Advertisements for Stateless IPv6 Autoconfiguraton (SLAAC)
+          IPv6AcceptRA = true;
+
+          IgnoreCarrierLoss = "3s";
+          # RouteMetric = "2048";
+        };
+        # make routing on this interface a dependency for network-online.target
+        # one of: no | routable | carrier
+        linkConfig.RequiredForOnline = "no";
+      };
+    };
+  };
 
   documentation.enable = true;
   documentation.dev.enable = true;
@@ -109,8 +207,6 @@
   # networking.proxy.default = "http://user:password@proxy:port/";
   # networking.proxy.noProxy = "127.0.0.1,localhost,internal.domain";
 
-  # Enable networking
-  networking.networkmanager.enable = true;
 
   # Set your time zone.
   time.timeZone = "Europe/Berlin";
@@ -211,42 +307,62 @@
     argc
     bind
     brave
+    bridge-utils
     cargo
+    cdrtools
+    cmake
+    deja-dup
     dmidecode
+    duplicity
+    duply
     file
     fio
+    gcc
     git
     gitlab-timelogs
     gitlint
+    gnumake
     gnupg
     google-chrome
+    gparted
     headsetcontrol
     helm
     iperf
     jq
+    kdePackages.krdc
     kdePackages.okular
     kubectl
     libreoffice
     libvirt
     man-pages
     man-pages-posix
+    net-tools
     nmap
     openssl
+    OVMF
+    OVMF-cloud-hypervisor
+    OVMFFull
     pciutils
     pre-commit
     pwgen
     python3
     python313Packages.pip
+    rustup
     shotwell
+    signal-desktop
     slack
     sshpass
+    tcpdump
     thunderbird
     tldr
     traceroute
+    tree
+    unzip
     usbutils
     usbutils
     util-linux
     virt-manager
+    vlc
     vscodium
     wget
     whois
@@ -348,6 +464,26 @@
       UseDns = true;
       X11Forwarding = false;
       PermitRootLogin = "prohibit-password"; # "yes", "without-password", "prohibit-password", "forced-commands-only", "no"
+    };
+  };
+
+
+  services.nginx = {
+    enable = false;
+    virtualHosts."_" = {
+      enableACME = false;
+      forceSSL = false;
+      root = "/var/www";
+      extraConfig = ''
+        autoindex on;
+        autoindex_exact_size off;
+        autoindex_localtime on;
+        index index.html index.htm;
+        location / {
+          autoindex on;
+          allow all;
+        }
+      '';
     };
   };
 }
