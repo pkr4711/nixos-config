@@ -24,11 +24,19 @@
   nix = {
     # Reference: https://nixos.org/manual/nix/stable/command-ref/conf-file
     settings = {
+
+      # container tests settings START
+      auto-allocate-uids = true;
+      extra-system-features = [ "uid-range" ];
+      # experimental-features = "nix-command flakes";
+      experimental-features = [ "auto-allocate-uids" "cgroups" "nix-command flakes" ];
+      # container tests settings END
+
       connect-timeout = 3; # don't hang forever when binary-cache is npt reachable
       log-lines = 25;
       min-free = 268435456; # 256 MiB
       max-free = 1073741824; # 1 GiB
-      experimental-features = "nix-command flakes";
+
       fallback = true;
       warn-dirty = false;
       # nix optimise the store after each and every build (for the built path)
@@ -49,25 +57,29 @@
       ;
       max-substitution-jobs = 128 # default is 16
       ;
-      trusted-substituters = [
-        "http://binary-cache-v2.vpn.cyberus-technology.de"
-      ];
-      substituters = [
-        "http://binary-cache-v2.vpn.cyberus-technology.de"
-      ];
-      trusted-public-keys = [
-        "cyberus-1:0jjMD2b+guloGW27ZToxDQApCoWj+4ONW9v8VH/Bv0Q=" # v2 cache
-      ];
+
+      ######################
+      # disabled temporary
+      ######################
+      # trusted-substituters = [
+      #   "http://binary-cache-v2.vpn.cyberus-technology.de"
+      # ];
+      # substituters = [
+      #   "http://binary-cache-v2.vpn.cyberus-technology.de"
+      # ];
+      # trusted-public-keys = [
+      #   "cyberus-1:0jjMD2b+guloGW27ZToxDQApCoWj+4ONW9v8VH/Bv0Q=" # v2 cache
+      # ];
     };
 
-    # Garbage Collection
-    gc = {
-      automatic = true;
-      dates = "monthly";
-      # Runs normal garbage-collection plus removes all NixOS generations
-      # that are older than the specified time.
-      options = "--delete-older-than 30d";
-    };
+    # # Garbage Collection
+    # gc = {
+    #   automatic = true;
+    #   dates = "monthly";
+    #   # Runs normal garbage-collection plus removes all NixOS generations
+    #   # that are older than the specified time.
+    #   options = "--delete-older-than 30d";
+    # };
 
     # Scheduled systemd service that optimizes all paths in the nix store
     # by replacing identical files in the store by hard links.
@@ -94,10 +106,12 @@
   networking.hostName = "mars"; # Define your hostname.
   # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
 
-  boot.kernelPackages = pkgs.linuxPackages_latest;
+  # boot.kernelPackages = pkgs.linuxPackages_latest;
+  boot.kernelPackages = pkgs.linuxPackages_6_18;
   boot.kernelParams = [ "mitigations=off" ];
 
   networking.firewall = {
+    enable = false;
     allowPing = true;
     rejectPackets = true;
     allowedTCPPorts = [ 22 ];
@@ -128,57 +142,126 @@
   systemd.network = {
     enable = true;
     netdevs = {
-        # Create the bridge interface
-        "20-br0" = {
-          netdevConfig = {
-            Kind = "bridge";
-            Name = "br0";
-          };
-        };
-
-        "30-tap0" = {
+        # # Create the bridge interface
+        # "20-br0" = {
+        #   netdevConfig = {
+        #     Kind = "bridge";
+        #     Name = "br0";
+        #   };
+        # };
+        "30-vmlocal-tap0" = {
           netdevConfig = {
             Kind = "tap";
-            Name = "tap0";
+            Name = "vmlocal-tap0";
           };
         };
+        "30-vmlocal-tap1" = {
+          netdevConfig = {
+            Kind = "tap";
+            Name = "vmlocal-tap1";
+          };
+        };
+        # "30-veth-host-local" = {
+        #   netdevConfig = {
+        #     Kind = "dummy";
+        #     Name = "veth-host-local";
+        #   };
+        # };
+
+        # "10-wg0" = {
+        #   netdevConfig = {
+        #     Kind = "wireguard";
+        #     Name = "wg0";
+        #     MTUBytes = "1420";
+        #   };
+        #   # See also man systemd.netdev (also contains info on the permissions of the key files)
+        #   wireguardConfig = {
+        #     # Don't use a file from the Nix store as these are world readable. Must be readable by the systemd.network user
+        #     PrivateKeyFile = "/home/wg/wg0.key";
+        #     ListenPort = 9918;
+        #   };
+        #   wireguardPeers = [
+        #     {
+        #       PublicKey = "fEPuT0oKPrEIW+mPCcaGDkMWqzkxK+Uzcm+AYv0nJ14=";
+        #       AllowedIPs = ["192.168.8.0/24" "fd49:397:aa40::/64"];
+        #       Endpoint = "8a07gg1cwe9houmm.myfritz.net:51026";
+        #     }
+        #   ];
+        # };
     };
     networks = {
       "10-lan" = {
         matchConfig.Name = "enp0s13f0*";   # enp0s13f0u3u1
-        networkConfig.Bridge = "br0";
-        linkConfig.RequiredForOnline = "enslaved";
-        # networkConfig = {
-        #   # start a DHCP Client for IPv4 Addressing/Routing
-        #   DHCP = "ipv4";
-        #   # accept Router Advertisements for Stateless IPv6 Autoconfiguraton (SLAAC)
-        #   IPv6AcceptRA = true;
-        # };
-        # # make routing on this interface a dependency for network-online.target
-        # linkConfig.RequiredForOnline = "routable";
-      };
-      "30-tap" = {
-        matchConfig.Name = "tap0";
-        networkConfig.Bridge = "br0";
-        linkConfig.RequiredForOnline = "no";
-      };
-      "20-br0" = {
-        matchConfig.Name = "br0";
-        bridgeConfig = {};
+        # networkConfig.Bridge = "br0";
+        # linkConfig.RequiredForOnline = "enslaved";
         networkConfig = {
           # start a DHCP Client for IPv4 Addressing/Routing
           DHCP = "ipv4";
           # accept Router Advertisements for Stateless IPv6 Autoconfiguraton (SLAAC)
           IPv6AcceptRA = true;
         };
+        ipv6AcceptRAConfig = {
+          RouteMetric = 100;
+        };
+        dhcpV4Config = {
+          RouteMetric = 100;
+        };
+        # make routing on this interface a dependency for network-online.target
+        linkConfig.RequiredForOnline = "routable";
+      };
+      "30-vmlocal-tap0" = {
+        matchConfig.Name = "vmlocal-tap0";
         linkConfig = {
-          # or "routable" with IP addresses configured
-          # or "carrier"
-          RequiredForOnline = "routable";
+          RequiredForOnline = "no";
+          ActivationPolicy = "always-up";
         };
       };
+      "30-vmlocal-tap1" = {
+        matchConfig.Name = "vmlocal-tap1";
+        linkConfig = {
+          RequiredForOnline = "no";
+          ActivationPolicy = "always-up";
+        };
+      };
+      "30-veth-host-local" = {
+        matchConfig.Name = "veth-host-local";
+        address = [
+          # must match with dnsmask
+          "192.168.100.1/24"
+        ];
+        linkConfig = {
+          RequiredForOnline = "no";
+          ActivationPolicy = "always-up";
+        };
+      };
+      # "10-wg0" = {
+      #   matchConfig.Name = "wg0";
+      #   address = [
+      #     "192.168.8.204/24"
+      #     "fd49:397:aa40::204/64"
+      #   ];
+      #   DHCP = "no";
+      #   dns = [
+      #     "192.168.8.8"
+      #     "192.168.8.1"
+      #     "fd49:397:aa40::3e37:12ff:febf:57cb"
+      #   ];
+      #   networkConfig = {
+      #     IPv6AcceptRA = false;
+      #   };
+      #   gateway = [
+      #     "fc00::1"
+      #     "192.168.8.1"
+      #   ];
+      # };
       "10-wlan" = {
         matchConfig.Name = "wlan0"; # wlp0s20f3
+        dhcpV4Config = {
+          RouteMetric = 200;
+        };
+        ipv6AcceptRAConfig = {
+          RouteMetric = 200;
+        };
         networkConfig = {
           # start a DHCP Client for IPv4 Addressing/Routing
           DHCP = "ipv4";
@@ -310,9 +393,11 @@
     bridge-utils
     cargo
     cdrtools
+    cloud-utils
     cmake
     deja-dup
     dmidecode
+    drawio
     duplicity
     duply
     file
@@ -327,6 +412,7 @@
     gparted
     headsetcontrol
     helm
+    impala    # iwd wireless manager
     iperf
     jq
     kdePackages.krdc
@@ -339,6 +425,7 @@
     net-tools
     nmap
     openssl
+    openvswitch
     OVMF
     OVMF-cloud-hypervisor
     OVMFFull
@@ -347,10 +434,13 @@
     pwgen
     python3
     python313Packages.pip
+    python313Packages.requests
+    ruff
     rustup
     shotwell
     signal-desktop
     slack
+    smartmontools
     sshpass
     tcpdump
     thunderbird
@@ -448,6 +538,24 @@
       runAsRoot = true;
       swtpm.enable = true;
     };
+  };
+
+  # enable openvswitch
+  virtualisation.vswitch.enable = true;
+
+  # dnsmasq service & settings for test environment
+  #   interfaces: br10 and tap1[0-4]
+  services.dnsmasq.enable = true;
+  services.dnsmasq.settings = {
+    interface=["veth-host-local"];
+    except-interface="lo";
+    bind-interfaces= true;
+    dhcp-range=["192.168.100.50,192.168.100.100,24h"];
+    dhcp-option=["3,192.168.100.1"];
+    dhcp-host=[
+      "02:50:F2:00:01:81,192.168.100.60"  # fixed ip address of windows test vm
+      "be:e3:00:00:00:01,192.168.100.70"
+      ];
   };
 
   security.sudo.extraConfig = ''
