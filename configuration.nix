@@ -418,6 +418,7 @@
     kdePackages.krdc
     kdePackages.okular
     kubectl
+    lazygit
     libreoffice
     libvirt
     man-pages
@@ -524,12 +525,7 @@
   };
 
   # Logitech udev rules
-  services.udev.extraRules = ''
-    # Your rule goes here
-    # Logitech G533 headset (adjust IDs from lsusb)
-    # SUBSYSTEM=="usb", ATTRS{idVendor}=="046d", ATTRS{idProduct}=="0a66", MODE="0660", GROUP="audio"
-    # SUBSYSTEM=="sound", ATTRS{idVendor}=="046d", ATTRS{idProduct}=="0a66", MODE="0660"
-  '';
+  services.udev.packages = [ pkgs.headsetcontrol ];
 
   virtualisation.libvirtd = {
     enable = true;
