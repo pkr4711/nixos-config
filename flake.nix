@@ -13,6 +13,9 @@
         modules = [
           ./configuration.nix
           ./hardware-configuration.nix
+          # ./networking-none-bridged.nix
+          ./networking-bridged-lan.nix
+          # ./networking-bridged-wlan.nix
         ];
       };
     };
