@@ -27,12 +27,25 @@
             Name = "vmlocal-tap1";
           };
         };
+        # VM local testing devices for CHV
+        "30-vmlocal-tap2" = {
+          netdevConfig = {
+            Kind = "tap";
+            Name = "vmlocal-tap2";
+          };
+        };
     };
     networks = {
 
       # bridged LAN interface
       "10-lan" = {
         matchConfig.Name = "enp0s13f0*";   # enp0s13f0u3u1
+        networkConfig.Bridge = "uplink-br0";
+        linkConfig.RequiredForOnline = "enslaved";
+      };
+
+      "11-lan" = {
+        matchConfig.Name = "enp0s31f6";
         networkConfig.Bridge = "uplink-br0";
         linkConfig.RequiredForOnline = "enslaved";
       };
@@ -91,6 +104,15 @@
       # VM local testing devices for CHV
       "30-vmlocal-tap1" = {
         matchConfig.Name = "vmlocal-tap1";
+        linkConfig = {
+          RequiredForOnline = "no";
+          ActivationPolicy = "always-up";
+        };
+      };
+
+      # VM local testing devices for CHV
+      "30-vmlocal-tap2" = {
+        matchConfig.Name = "vmlocal-tap2";
         linkConfig = {
           RequiredForOnline = "no";
           ActivationPolicy = "always-up";

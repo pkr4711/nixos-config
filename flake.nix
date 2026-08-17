@@ -2,7 +2,7 @@
   description = "Nixos setup pkr4711";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
   };
 
   outputs = { self, nixpkgs }: {
@@ -16,6 +16,7 @@
           # ./networking-none-bridged.nix
           ./networking-bridged-lan.nix
           # ./networking-bridged-wlan.nix
+          ./networking-hosts.nix
         ];
       };
     };

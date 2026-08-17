@@ -203,8 +203,12 @@
   services.resolved = {
     enable = true;
 
-    # This leads to spurious failures?
-    dnssec = "false";
+    settings = {
+      Resolve = {
+        # This leads to spurious failures?
+        DNSSEC = "false";
+      };
+    };
   };
 
 
@@ -276,6 +280,8 @@
     headsetcontrol
     helm
     impala    # iwd wireless manager
+    inspec
+    inxi      # inxi --sensors
     iperf
     jq
     kdePackages.krdc
@@ -289,6 +295,7 @@
     net-tools
     nmap
     openssl
+    opentofu
     openvswitch
     OVMF
     OVMF-cloud-hypervisor
@@ -307,6 +314,7 @@
     smartmontools
     sshpass
     tcpdump
+    tenv
     thunderbird
     tldr
     traceroute
@@ -452,5 +460,13 @@
         }
       '';
     };
+  };
+
+  # automount nfs
+  services.autofs = {
+    enable = false;
+    autoMaster = ''
+      /net  -hosts --timeout=60
+    '';
   };
 }
