@@ -106,8 +106,8 @@
   networking.hostName = "mars"; # Define your hostname.
   # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
 
-  # boot.kernelPackages = pkgs.linuxPackages_latest;
-  boot.kernelPackages = pkgs.linuxPackages_6_18;
+  boot.kernelPackages = pkgs.linuxPackages_latest;
+  # boot.kernelPackages = pkgs.linuxPackages_6_18;
   boot.kernelParams = [ "mitigations=off" ];
 
   networking.firewall = {
@@ -136,10 +136,13 @@
 
   networking.wireless.iwd.enable = true;
   networking.wireless.iwd.settings = {
-    Settings.AutoConnect = true;
+    Settings = {
+      AutoConnect = true;
+    };
+    Rank = {
+      BandModifier5Ghz = "2.0";
+    };
   };
-
-
 
   documentation.enable = true;
   documentation.dev.enable = true;
@@ -412,18 +415,35 @@
 
   # dnsmasq service & settings for test environment
   #   interfaces: br10 and tap1[0-4]
-  services.dnsmasq.enable = true;
-  services.dnsmasq.settings = {
-    interface=["veth-host-local"];
-    except-interface="lo";
-    bind-interfaces= true;
-    dhcp-range=["192.168.100.50,192.168.100.100,24h"];
-    dhcp-option=["3,192.168.100.1"];
-    dhcp-host=[
-      "02:50:F2:00:01:81,192.168.100.60"  # fixed ip address of windows test vm
-      "be:e3:00:00:00:01,192.168.100.70"
-      ];
-  };
+  services.dnsmasq.enable = false;
+  # services.dnsmasq.settings = {
+  #   interface=[
+  #     # "veth-host-local"
+  #     "veth-osmgmt"
+  #   ];
+  #   except-interface="lo";
+  #   bind-interfaces= true;
+  #   dhcp-range=[
+  #     # "interface:veth-host-local,192.168.100.50,192.168.100.100,24h"
+  #     "interface:veth-osmgmt,192.168.200.50,192.168.200.100,24h"
+  #   ];
+  #   dhcp-option=[
+  #     # "interface:veth-host-local,3,192.168.100.1" # router/gateway
+  #     # "interface:veth-host-local,1,255.255.255.0" # subnet mask
+  #     "interface:veth-osmgmt,3,192.168.200.1"       # router/gateway
+  #     # "interface:veth-osmgmt,1,255.255.255.0"       # subnet mask
+  #   ];
+  #   dhcp-host=[
+  #     "02:50:F2:00:01:81,192.168.100.60"  # fixed ip address of windows test vm
+  #     "be:e3:00:00:00:01,192.168.100.70"
+
+  #     # openstack test VMs
+  #     "52:54:00:d4:ae:26,192.168.200.20"  # controller
+  #     "52:54:00:03:77:cf,192.168.200.21"  # compute
+  #     "52:54:00:10:ef:36,192.168.200.22"  # storage
+  #     "52:54:00:b7:6c:0d,192.168.200.23"  # osdns
+  #     ];
+  # };
 
   security.sudo.extraConfig = ''
     Defaults        timestamp_timeout=30
